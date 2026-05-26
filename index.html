@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Поделись мнением — обработка опроса</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+<style>
+  :root {
+    --bg: #f7f4ff;
+    --card: #ffffff;
+    --ink: #1a1340;
+    --ink-soft: #5b5478;
+    --accent: #4A2BD9;
+    --accent-soft: #ede6ff;
+    --border: #e3dcf5;
+    --green: #34D86B;
+    --yellow: #F5E551;
+    --red: #E84B4B;
+    --purple: #4A2BD9;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.5;
+    padding: 32px 16px 64px;
+  }
+  .container { max-width: 1180px; margin: 0 auto; }
+  h1 { font-size: 32px; font-weight: 700; margin: 0 0 8px; letter-spacing: -0.5px; }
+  .subtitle { color: var(--ink-soft); margin-bottom: 28px; font-size: 15px; }
+  .card {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 20px;
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 2px rgba(74,43,217,0.04);
+  }
+  .card h2 {
+    margin: 0 0 16px;
+    font-size: 18px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .step-num {
+    display: inline-flex;
+    width: 26px; height: 26px;
+    align-items: center; justify-content: center;
+    background: var(--accent);
+    color: white;
+    border-radius: 50%;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: #fafaff;
+  }
+  .drop-zone:hover, .drop-zone.dragover { border-color: var(--accent); background: var(--accent-soft); }
+  .drop-zone p { margin: 6px 0; }
+  .drop-zone .big { font-weight: 600; font-size: 15px; }
+  .drop-zone .small { font-size: 13px; color: var(--ink-soft); }
+  .drop-zone input { display: none; }
+
+  .field { margin-bottom: 14px; }
+  .field label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink-soft);
+    margin-bottom: 5px;
+  }
+  .field input, .field textarea {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--ink);
+    background: white;
+  }
+  .field input:focus, .field textarea:focus { outline: none; border-color: var(--accent); }
+  .field textarea { resize: vertical; min-height: 60px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 700px) { .row { grid-template-columns: 1fr; } }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: 8px;
+    border: none;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: #3a20b3; }
+  .btn-ghost { background: white; border: 1px solid var(--border); color: var(--ink); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-sm { padding: 6px 12px; font-size: 13px; }
+
+  .results { display: none; }
+  .results.shown { display: block; }
+
+  .result-table-wrap {
+    overflow-x: auto;
+    background: white;
+    border-radius: 12px;
+    padding: 8px;
+  }
+  #resultTable {
+    font-family: 'Open Sans', sans-serif;
+    border-collapse: separate;
+    border-spacing: 2px;
+    width: 100%;
+    min-width: 1100px;
+  }
+  #resultTable th {
+    background: var(--purple);
+    color: white;
+    font-weight: 700;
+    padding: 12px 6px;
+    font-size: 12px;
+    text-align: center;
+    border-radius: 4px;
+  }
+  #resultTable th:first-child { background: white; }
+  #resultTable td {
+    padding: 10px 4px;
+    text-align: center;
+    font-weight: 700;
+    font-size: 14px;
+    border-radius: 4px;
+    vertical-align: middle;
+  }
+  #resultTable td.q {
+    text-align: left;
+    background: #f5f0ff;
+    font-weight: 400;
+    font-size: 11px;
+    padding: 8px 10px;
+    max-width: 320px;
+    color: #1a1340;
+    font-family: 'Open Sans', sans-serif;
+  }
+  #resultTable td.cell-red { background: var(--red); color: white; }
+  #resultTable td.cell-yellow { background: var(--yellow); color: black; }
+  #resultTable td.cell-purple { background: var(--purple); color: white; }
+  #resultTable td.cell-green { background: var(--green); color: black; }
+  #resultTable td.cell-avg { background: #B7F0CA; color: black; }
+  #resultTable td.cell-sum { background: #E6F2F5; color: black; font-size: 13px; padding: 7px 4px; }
+  #resultTable .sum-label { text-align: right; font-weight: 600; padding-right: 12px; }
+
+  .post-output {
+    background: #faf8ff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    max-height: 600px;
+    overflow-y: auto;
+  }
+  .placeholder-warn {
+    background: #fff4cc;
+    border-left: 3px solid #d4a017;
+    padding: 1px 8px;
+    margin: 0 2px;
+    border-radius: 3px;
+    color: #6b4f00;
+    font-size: 13px;
+  }
+  .post-output em.hint {
+    background: #fffde0;
+    color: #806000;
+    font-style: italic;
+    padding: 1px 5px;
+    border-radius: 3px;
+    cursor: help;
+    position: relative;
+    border-bottom: 1px dashed #d4a017;
+  }
+  .post-output em.hint:hover::after {
+    content: attr(data-tip);
+    position: absolute;
+    left: 0;
+    top: calc(100% + 4px);
+    background: var(--ink);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-style: normal;
+    white-space: pre-wrap;
+    min-width: 320px;
+    max-width: 460px;
+    z-index: 50;
+    line-height: 1.4;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+  }
+
+  .actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+  }
+  .small-note { font-size: 12px; color: var(--ink-soft); margin-top: 8px; }
+  details { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 14px; }
+  details summary { cursor: pointer; font-weight: 500; color: var(--accent); font-size: 14px; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 12px; font-size: 12px; color: var(--ink-soft); }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .legend i { display: inline-block; width: 14px; height: 14px; border-radius: 3px; }
+
+  .toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--ink);
+    color: white;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    z-index: 100;
+  }
+  .toast.shown { opacity: 1; }
+  .error { background: #ffe6e6; border: 1px solid var(--red); color: #b80000; padding: 12px; border-radius: 8px; margin-top: 12px; font-size: 13px; }
+
+  /* Сравнение */
+  .compare-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+  @media (max-width: 700px) { .compare-grid { grid-template-columns: 1fr; } }
+  .compare-card {
+    background: #fafaff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .compare-card h4 {
+    margin: 0 0 8px;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--ink-soft);
+    font-weight: 600;
+  }
+  .compare-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .compare-row:last-child { border-bottom: none; }
+  .compare-row .name { flex: 1; padding-right: 8px; }
+  .compare-row .delta { font-weight: 700; font-size: 14px; min-width: 60px; text-align: right; }
+  .delta.up { color: #1b9b4f; }
+  .delta.down { color: #c93434; }
+  .delta.flat { color: var(--ink-soft); }
+
+  /* Аналитика — список */
+  .analytic-block {
+    background: #fafaff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-bottom: 12px;
+  }
+  .analytic-block h4 {
+    margin: 0 0 8px;
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .analytic-block ul { margin: 0; padding-left: 22px; font-size: 13px; line-height: 1.6; }
+  .analytic-block .badge {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    color: white;
+  }
+  .badge-up { background: #1b9b4f; }
+  .badge-down { background: #c93434; }
+  .badge-flat { background: #888; }
+
+  .history-list { font-size: 13px; }
+  .history-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .history-item:last-child { border-bottom: none; }
+  .history-item .name { font-weight: 500; }
+  .history-item .when { color: var(--ink-soft); font-size: 12px; }
+  .history-empty { color: var(--ink-soft); font-style: italic; padding: 8px 0; font-size: 13px; }
+
+  .tab-switch {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 16px;
+    background: #fafaff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px;
+    width: fit-content;
+  }
+  .tab-switch button {
+    background: transparent;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 7px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink-soft);
+  }
+  .tab-switch button.active { background: var(--accent); color: white; }
+
+  .reco-info {
+    background: #fff8e6;
+    border-left: 3px solid #d4a017;
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    margin-bottom: 12px;
+    color: #6b4f00;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Поделись мнением</h1>
+  <p class="subtitle">Загружаешь эксель → получаешь картинку, таблицу, пост и аналитику</p>
+
+  <!-- ШАГ 1: Настройки -->
+  <div class="card">
+    <h2><span class="step-num">1</span> Настройки (сохраняются в браузере)</h2>
+    <p class="small-note" style="margin-top:-8px;margin-bottom:14px">
+      Заполни один раз — каждый месяц подставится в пост автоматически. Хранится локально в браузере.
+    </p>
+
+    <div class="row">
+      <div class="field">
+        <label>Месяц опроса (для заголовка поста и истории)</label>
+        <input id="cfg-month" placeholder="апреля">
+      </div>
+      <div class="field">
+        <label>Процент ответивших</label>
+        <input id="cfg-response" type="number" step="0.1" placeholder="48">
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-ghost" onclick="saveConfig()">💾 Сохранить настройки</button>
+    </div>
+  </div>
+
+  <!-- ШАГ 2: Загрузка -->
+  <div class="card">
+    <h2><span class="step-num">2</span> Загрузи эксель опроса</h2>
+    <div class="drop-zone" id="dropzone">
+      <p class="big">📂 Перетащи .xlsx сюда</p>
+      <p class="small">или нажми, чтобы выбрать файл</p>
+      <input type="file" id="fileInput" accept=".xlsx,.xls">
+    </div>
+    <p class="small-note">
+      Поддерживается экспорт из Superset-дашборда «HR | Поделись мнением» (берётся лист «Детализация вопросов» + автоподтягивается % ответивших) и обычный xlsx с темами/вопросами.
+    </p>
+    <div id="errorBox"></div>
+  </div>
+
+  <!-- ИСТОРИЯ -->
+  <div class="card" id="historyCard">
+    <h2>📚 История загрузок</h2>
+    <p class="small-note" style="margin-top:-8px;margin-bottom:10px">
+      Используется для сравнения с прошлым периодом.
+    </p>
+    <div id="historyList" class="history-list"></div>
+  </div>
+
+  <!-- РЕЗУЛЬТАТ -->
+  <div class="card results" id="resultsCard">
+    <h2><span class="step-num">3</span> Результаты</h2>
+
+    <div class="tab-switch">
+      <button class="active" data-tab="table" onclick="switchTab('table')">Таблица</button>
+      <button data-tab="compare" onclick="switchTab('compare')">Сравнение с прошлым</button>
+      <button data-tab="analytics" onclick="switchTab('analytics')">📊 Общая аналитика</button>
+      <button data-tab="post" onclick="switchTab('post')">Пост</button>
+    </div>
+
+    <!-- Вкладка: таблица -->
+    <div id="tab-table">
+      <div class="result-table-wrap" id="tableWrap">
+        <table id="resultTable"></table>
+      </div>
+      <div class="legend">
+        <span><i style="background:var(--red)"></i> &lt; 6,0</span>
+        <span><i style="background:var(--yellow)"></i> 6,0–6,9</span>
+        <span><i style="background:var(--purple)"></i> 7,0–7,9</span>
+        <span><i style="background:var(--green)"></i> ≥ 8,0</span>
+      </div>
+      <div class="actions">
+        <button class="btn btn-primary" onclick="downloadPng()">🖼️ Скачать картинку (PNG)</button>
+        <button class="btn btn-primary" onclick="downloadXlsx()">📊 Скачать таблицу (XLSX)</button>
+      </div>
+    </div>
+
+    <!-- Вкладка: сравнение -->
+    <div id="tab-compare" style="display:none">
+      <div id="compareContent"></div>
+    </div>
+
+    <!-- Вкладка: аналитика -->
+    <div id="tab-analytics" style="display:none">
+      <p class="small-note" style="margin-top:0;margin-bottom:14px">
+        💼 <strong>Внутренний раздел для HR.</strong> Этот блок не идёт в публикацию, только для анализа.
+      </p>
+      <div id="analyticsContent"></div>
+    </div>
+
+    <!-- Вкладка: пост -->
+    <div id="tab-post" style="display:none">
+      <div class="post-output" id="postOutput"></div>
+      <div class="actions">
+        <button class="btn btn-primary" onclick="copyPost()">📋 Скопировать пост</button>
+        <button class="btn btn-ghost" onclick="downloadPost()">⬇ Скачать .txt</button>
+      </div>
+      <p class="small-note" id="postNote"></p>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============ КОНФИГ ============
+const CFG_KEYS = ['cfg-month','cfg-response'];
+function loadConfig() {
+  CFG_KEYS.forEach(k => {
+    const v = localStorage.getItem(k);
+    if (v !== null) document.getElementById(k).value = v;
+  });
+}
+function saveConfig() {
+  CFG_KEYS.forEach(k => localStorage.setItem(k, document.getElementById(k).value));
+  toast('Настройки сохранены');
+  if (lastValidRows) renderAll();
+}
+function cfg(key) { return document.getElementById(key).value.trim(); }
+loadConfig();
+
+// ============ TOAST ============
+let toastTimer;
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('shown');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('shown'), 1800);
+}
+
+// ============ ИСТОРИЯ (localStorage) ============
+const HISTORY_KEY = 'survey-history';
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); }
+  catch { return []; }
+}
+function saveHistory(history) {
+  // Ограничиваем 12 последних
+  if (history.length > 12) history = history.slice(0, 12);
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+}
+function addToHistory(label, circleNames, rows, responseRate) {
+  const history = loadHistory();
+  // Если есть запись с таким же label — заменяем
+  const idx = history.findIndex(h => h.label === label);
+  const entry = {
+    label,
+    savedAt: new Date().toISOString(),
+    circleNames,
+    rows: rows.map(r => ({ theme: r.theme, question: r.question, values: r.values })),
+    responseRate
+  };
+  if (idx >= 0) history[idx] = entry;
+  else history.unshift(entry);
+  saveHistory(history);
+  renderHistory();
+}
+function removeFromHistory(label) {
+  if (!confirm('Удалить запись «' + label + '» из истории?')) return;
+  const history = loadHistory().filter(h => h.label !== label);
+  saveHistory(history);
+  renderHistory();
+  if (lastValidRows) renderAll();
+}
+function clearHistory() {
+  if (!confirm('Удалить всю историю?')) return;
+  localStorage.removeItem(HISTORY_KEY);
+  renderHistory();
+  if (lastValidRows) renderAll();
+}
+function renderHistory() {
+  const history = loadHistory();
+  const el = document.getElementById('historyList');
+  if (history.length === 0) {
+    el.innerHTML = '<div class="history-empty">История пуста. После загрузки файла данные сохранятся для сравнения.</div>';
+    return;
+  }
+  el.innerHTML = history.map(h => `
+    <div class="history-item">
+      <div>
+        <div class="name">${escapeHtml(h.label)}</div>
+        <div class="when">сохранено ${new Date(h.savedAt).toLocaleDateString('ru-RU')} · ${h.rows.length} вопросов · ${h.responseRate ? h.responseRate + '% ответили' : '—'}</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="removeFromHistory('${escapeAttr(h.label)}')">✕</button>
+    </div>
+  `).join('') + `<div style="margin-top:10px"><button class="btn btn-ghost btn-sm" onclick="clearHistory()">Очистить всю историю</button></div>`;
+}
+function escapeAttr(s) { return s.replace(/'/g, "\\'"); }
+
+// ============ УТИЛИТЫ ============
+function colorClassFor(v) {
+  if (v < 5.95) return 'cell-red';
+  if (v < 6.95) return 'cell-yellow';
+  if (v < 7.95) return 'cell-purple';
+  return 'cell-green';
+}
+function fmt(v) { return v.toFixed(1).replace('.', ','); }
+function fmtSigned(v) {
+  const sign = v > 0 ? '+' : '';
+  return sign + v.toFixed(1).replace('.', ',');
+}
+function mean(arr) { return arr.reduce((a,b)=>a+b,0)/arr.length; }
+function median(arr) {
+  const s = [...arr].sort((a,b)=>a-b);
+  const n = s.length;
+  return n % 2 ? s[(n-1)/2] : (s[n/2-1]+s[n/2])/2;
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ============ ПАРСИНГ ============
+let lastValidRows = null;
+let lastCircleNames = null;
+let detectedResponseRate = null;
+
+function parseWorkbook(workbook) {
+  let targetSheet = workbook.SheetNames.find(n =>
+    n.toLowerCase().includes('детализаци')) || workbook.SheetNames[0];
+  const ws = workbook.Sheets[targetSheet];
+  const arr = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+
+  if (arr.length < 3) throw new Error('Лист «' + targetSheet + '» слишком короткий');
+
+  detectedResponseRate = null;
+  const respSheetName = workbook.SheetNames.find(n =>
+    n.toLowerCase().includes('процент') && n.toLowerCase().includes('прош'));
+  if (respSheetName) {
+    try {
+      const rows = XLSX.utils.sheet_to_json(workbook.Sheets[respSheetName], { defval: null });
+      if (rows.length > 0) {
+        const keys = Object.keys(rows[0]);
+        const pctKey = keys.find(k => k.toLowerCase().includes('completed') ||
+                                       k.toLowerCase().includes('%') ||
+                                       k.toLowerCase().includes('процент'));
+        if (pctKey) {
+          const vals = rows.map(r => r[pctKey]).filter(v => typeof v === 'number');
+          if (vals.length > 0) {
+            let avg = vals.reduce((a,b)=>a+b,0) / vals.length;
+            if (avg <= 1) avg = avg * 100;
+            detectedResponseRate = +avg.toFixed(1);
+          }
+        }
+      }
+    } catch(e) {}
+  }
+
+  let headerRow = -1;
+  for (let i = 0; i < Math.min(5, arr.length); i++) {
+    const cnt = arr[i].filter(c => typeof c === 'string' && c.includes('|')).length;
+    if (cnt >= 5) { headerRow = i; break; }
+  }
+  if (headerRow === -1) throw new Error('Не нашёл строку с названиями кругов (формат "ID | Название")');
+
+  const circleCols = [];
+  const circleNames = [];
+  arr[headerRow].forEach((cell, idx) => {
+    if (typeof cell === 'string' && cell.includes('|')) {
+      circleCols.push(idx);
+      circleNames.push(cell.split('|')[1].trim());
+    }
+  });
+
+  let dataStart = headerRow + 1;
+  while (dataStart < arr.length) {
+    const c0 = arr[dataStart][0], c1 = arr[dataStart][1];
+    if ((typeof c0 === 'string' && c0.trim().toLowerCase() === 'тема') ||
+        (typeof c1 === 'string' && c1.trim().toLowerCase() === 'вопрос')) dataStart++;
+    else break;
+  }
+
+  let currentTheme = null;
+  const validRows = [];
+  for (let i = dataStart; i < arr.length; i++) {
+    const row = arr[i];
+    if (!row) continue;
+    if (row[0] && typeof row[0] === 'string') currentTheme = row[0].trim();
+    if (!row[1] || typeof row[1] !== 'string') continue;
+    const values = circleCols.map(ci => row[ci]);
+    const numValues = values.map(v => (typeof v === 'number' ? v : null));
+    const filled = numValues.filter(v => v !== null && !isNaN(v)).length;
+    if (filled === circleCols.length) {
+      validRows.push({ theme: currentTheme, question: row[1].trim(), values: numValues });
+    }
+  }
+
+  if (validRows.length === 0) throw new Error('Не нашлось строк с ответами от всех кругов');
+  return { circleNames, validRows };
+}
+
+// ============ ТАБЛИЦА ============
+function renderTable(circleNames, rows) {
+  const table = document.getElementById('resultTable');
+  let html = '<thead><tr><th></th>';
+  circleNames.forEach(n => html += `<th>${escapeHtml(n)}</th>`);
+  html += '<th>Среднее</th><th>Медиана</th></tr></thead><tbody>';
+
+  rows.forEach(r => {
+    html += `<tr><td class="q">${escapeHtml(r.question)}</td>`;
+    r.values.forEach(v => html += `<td class="${colorClassFor(v)}">${fmt(v)}</td>`);
+    const avg = mean(r.values);
+    const med = median(r.values);
+    html += `<td class="cell-avg">${fmt(avg)}</td><td class="cell-avg">${fmt(med)}</td></tr>`;
+  });
+
+  const colAvgs = circleNames.map((_,ci) => mean(rows.map(r => r.values[ci])));
+  const colMeds = circleNames.map((_,ci) => median(rows.map(r => r.values[ci])));
+  html += `<tr><td class="cell-sum sum-label">Среднее</td>`;
+  colAvgs.forEach(v => html += `<td class="cell-sum">${fmt(v)}</td>`);
+  html += `<td class="cell-sum"></td><td class="cell-sum"></td></tr>`;
+  html += `<tr><td class="cell-sum sum-label">Медиана</td>`;
+  colMeds.forEach(v => html += `<td class="cell-sum">${fmt(v)}</td>`);
+  html += `<td class="cell-sum"></td><td class="cell-sum"></td></tr>`;
+  html += '</tbody>';
+  table.innerHTML = html;
+}
+
+// ============ СРАВНЕНИЕ С ПРОШЛЫМ ============
+function getPreviousPeriod() {
+  const history = loadHistory();
+  const currentLabel = currentRunLabel();
+  // Берём первую запись, которая НЕ равна текущему лейблу
+  return history.find(h => h.label !== currentLabel);
+}
+
+function compareWithPrevious() {
+  const prev = getPreviousPeriod();
+  if (!prev) return null;
+
+  const result = {
+    prevLabel: prev.label,
+    byQuestion: [],
+    byCircle: [],
+    overallNow: 0,
+    overallPrev: 0
+  };
+
+  // По вопросам — матчим по тексту вопроса
+  lastValidRows.forEach(r => {
+    const match = prev.rows.find(pr => pr.question === r.question);
+    const nowAvg = mean(r.values);
+    if (match) {
+      const prevAvg = mean(match.values);
+      result.byQuestion.push({
+        question: r.question, theme: r.theme,
+        now: nowAvg, prev: prevAvg, delta: nowAvg - prevAvg
+      });
+    } else {
+      result.byQuestion.push({
+        question: r.question, theme: r.theme,
+        now: nowAvg, prev: null, delta: null
+      });
+    }
+  });
+
+  // По кругам — матчим по имени
+  lastCircleNames.forEach((name, ci) => {
+    const nowAvg = mean(lastValidRows.map(r => r.values[ci]));
+    const prevCi = prev.circleNames.indexOf(name);
+    if (prevCi >= 0) {
+      const prevAvg = mean(prev.rows.map(r => r.values[prevCi]));
+      result.byCircle.push({ name, now: nowAvg, prev: prevAvg, delta: nowAvg - prevAvg });
+    } else {
+      result.byCircle.push({ name, now: nowAvg, prev: null, delta: null });
+    }
+  });
+
+  // Общий показатель
+  const allNow = lastValidRows.flatMap(r => r.values);
+  const allPrev = prev.rows.flatMap(r => r.values);
+  result.overallNow = mean(allNow);
+  result.overallPrev = mean(allPrev);
+
+  return result;
+}
+
+function renderCompare() {
+  const el = document.getElementById('compareContent');
+  const cmp = compareWithPrevious();
+  if (!cmp) {
+    el.innerHTML = `<div class="history-empty">Нет данных для сравнения. Загрузи данные за другой период (или текущий период уже в истории — тогда сравнивать не с чем). История появляется автоматически после каждой загрузки.</div>`;
+    return;
+  }
+
+  const overallDelta = cmp.overallNow - cmp.overallPrev;
+  const overallClass = overallDelta > 0.05 ? 'up' : (overallDelta < -0.05 ? 'down' : 'flat');
+
+  const positives = cmp.byQuestion.filter(q => q.delta !== null && q.delta > 0.05).sort((a,b) => b.delta - a.delta);
+  const negatives = cmp.byQuestion.filter(q => q.delta !== null && q.delta < -0.05).sort((a,b) => a.delta - b.delta);
+
+  let html = '';
+  html += `<div class="compare-card" style="margin-bottom:16px">
+    <h4>Общий показатель</h4>
+    <div class="compare-row">
+      <span class="name">Среднее по всем ответам</span>
+      <span><strong>${fmt(cmp.overallNow)}</strong> <span class="delta ${overallClass}">${fmtSigned(overallDelta)}</span></span>
+    </div>
+    <div class="compare-row">
+      <span class="name">Сравнение с</span>
+      <span style="color:var(--ink-soft)">${escapeHtml(cmp.prevLabel)} (было ${fmt(cmp.overallPrev)})</span>
+    </div>
+  </div>`;
+
+  html += `<div class="compare-grid">`;
+
+  // Топ-рост
+  html += `<div class="compare-card"><h4>📈 Выросло сильнее всего</h4>`;
+  if (positives.length === 0) html += `<div class="history-empty">Заметного роста нет</div>`;
+  else positives.slice(0, 5).forEach(q => {
+    html += `<div class="compare-row">
+      <span class="name">${escapeHtml(shortenQuestion(q.question))}</span>
+      <span class="delta up">${fmtSigned(q.delta)}</span>
+    </div>`;
+  });
+  html += `</div>`;
+
+  // Топ-падение
+  html += `<div class="compare-card"><h4>📉 Просело сильнее всего</h4>`;
+  if (negatives.length === 0) html += `<div class="history-empty">Заметного падения нет</div>`;
+  else negatives.slice(0, 5).forEach(q => {
+    html += `<div class="compare-row">
+      <span class="name">${escapeHtml(shortenQuestion(q.question))}</span>
+      <span class="delta down">${fmtSigned(q.delta)}</span>
+    </div>`;
+  });
+  html += `</div>`;
+
+  html += `</div>`;
+
+  // Динамика по кругам
+  const circlesSorted = [...cmp.byCircle].filter(c => c.delta !== null).sort((a,b) => Math.abs(b.delta) - Math.abs(a.delta));
+  html += `<div class="compare-card"><h4>Динамика по кругам</h4>`;
+  circlesSorted.forEach(c => {
+    const cls = c.delta > 0.05 ? 'up' : (c.delta < -0.05 ? 'down' : 'flat');
+    html += `<div class="compare-row">
+      <span class="name">${escapeHtml(c.name)}</span>
+      <span>${fmt(c.now)} <span class="delta ${cls}">${fmtSigned(c.delta)}</span></span>
+    </div>`;
+  });
+  const newCircles = cmp.byCircle.filter(c => c.delta === null);
+  if (newCircles.length) {
+    newCircles.forEach(c => {
+      html += `<div class="compare-row">
+        <span class="name">${escapeHtml(c.name)}</span>
+        <span style="color:var(--ink-soft);font-size:12px">${fmt(c.now)} · <em>новый круг</em></span>
+      </div>`;
+    });
+  }
+  html += `</div>`;
+
+  el.innerHTML = html;
+}
+
+// ============ ОБЩАЯ АНАЛИТИКА (для HR) ============
+function renderAnalytics() {
+  const el = document.getElementById('analyticsContent');
+  const rows = lastValidRows;
+  const circles = lastCircleNames;
+
+  const allValues = rows.flatMap(r => r.values);
+  const overallAvg = mean(allValues);
+  const overallMed = median(allValues);
+
+  // По темам
+  const themeStats = rows.map(r => ({
+    theme: r.theme, question: r.question,
+    avg: mean(r.values), med: median(r.values),
+    min: Math.min(...r.values), max: Math.max(...r.values),
+    spread: Math.max(...r.values) - Math.min(...r.values)
+  }));
+  const worstThemes = [...themeStats].sort((a,b) => a.avg - b.avg).slice(0, 3);
+  const bestThemes = [...themeStats].sort((a,b) => b.avg - a.avg).slice(0, 3);
+  const mostDivergent = [...themeStats].sort((a,b) => b.spread - a.spread).slice(0, 3);
+
+  // По кругам
+  const circleStats = circles.map((name, ci) => {
+    const vals = rows.map(r => r.values[ci]);
+    return { name, avg: mean(vals), med: median(vals), min: Math.min(...vals), max: Math.max(...vals) };
+  });
+  const worstCircles = [...circleStats].sort((a,b) => a.avg - b.avg).slice(0, 3);
+  const bestCircles = [...circleStats].sort((a,b) => b.avg - a.avg).slice(0, 3);
+
+  // Зоны риска: круги, у которых много низких оценок
+  const riskCircles = circles.map((name, ci) => {
+    const vals = rows.map(r => r.values[ci]);
+    const redCount = vals.filter(v => v < 6).length;
+    const yellowCount = vals.filter(v => v >= 6 && v < 7).length;
+    return { name, redCount, yellowCount, totalLow: redCount + yellowCount, avg: mean(vals) };
+  }).filter(c => c.totalLow >= 2).sort((a,b) => b.totalLow - a.totalLow);
+
+  // Сравнение с прошлым
+  const cmp = compareWithPrevious();
+
+  let html = '';
+
+  // Сводка
+  html += `<div class="analytic-block">
+    <h4>📌 Сводка</h4>
+    <ul>
+      <li>Общее среднее по всем ответам: <strong>${fmt(overallAvg)}</strong> · медиана: <strong>${fmt(overallMed)}</strong>
+        ${cmp ? `<span class="badge ${overallAvg - cmp.overallPrev > 0.05 ? 'badge-up' : overallAvg - cmp.overallPrev < -0.05 ? 'badge-down' : 'badge-flat'}">${fmtSigned(overallAvg - cmp.overallPrev)} к прошлому</span>` : ''}
+      </li>
+      <li>Проанализировано вопросов: <strong>${rows.length}</strong>; кругов: <strong>${circles.length}</strong></li>
+      ${detectedResponseRate ? `<li>Активность: <strong>${detectedResponseRate}%</strong> (среднее по кругам)</li>` : ''}
+    </ul>
+  </div>`;
+
+  // Сильные и слабые темы
+  html += `<div class="compare-grid">
+    <div class="analytic-block">
+      <h4>✅ Сильные темы</h4>
+      <ul>${bestThemes.map(t => `<li><strong>${fmt(t.avg)}</strong> — ${escapeHtml(t.theme || shortenQuestion(t.question))}</li>`).join('')}</ul>
+    </div>
+    <div class="analytic-block">
+      <h4>⚠️ Темы с наименьшими оценками</h4>
+      <ul>${worstThemes.map(t => `<li><strong>${fmt(t.avg)}</strong> — ${escapeHtml(t.theme || shortenQuestion(t.question))}</li>`).join('')}</ul>
+    </div>
+  </div>`;
+
+  // Динамика
+  if (cmp) {
+    const positives = cmp.byQuestion.filter(q => q.delta !== null && q.delta > 0.3).sort((a,b) => b.delta - a.delta).slice(0,3);
+    const negatives = cmp.byQuestion.filter(q => q.delta !== null && q.delta < -0.3).sort((a,b) => a.delta - b.delta).slice(0,3);
+    html += `<div class="analytic-block">
+      <h4>📊 Существенная динамика (порог ±0,3) vs ${escapeHtml(cmp.prevLabel)}</h4>`;
+    if (positives.length === 0 && negatives.length === 0) {
+      html += `<div class="history-empty">Существенных изменений по сравнению с прошлым периодом нет</div>`;
+    } else {
+      html += `<ul>`;
+      positives.forEach(q => html += `<li><span class="badge badge-up">${fmtSigned(q.delta)}</span> ${escapeHtml(shortenQuestion(q.question))}</li>`);
+      negatives.forEach(q => html += `<li><span class="badge badge-down">${fmtSigned(q.delta)}</span> ${escapeHtml(shortenQuestion(q.question))}</li>`);
+      html += `</ul>`;
+    }
+    html += `</div>`;
+  }
+
+  // По кругам
+  html += `<div class="compare-grid">
+    <div class="analytic-block">
+      <h4>🏆 Лидеры по среднему</h4>
+      <ul>${bestCircles.map(c => `<li><strong>${fmt(c.avg)}</strong> — ${escapeHtml(c.name)}</li>`).join('')}</ul>
+    </div>
+    <div class="analytic-block">
+      <h4>📉 Аутсайдеры по среднему</h4>
+      <ul>${worstCircles.map(c => `<li><strong>${fmt(c.avg)}</strong> — ${escapeHtml(c.name)}</li>`).join('')}</ul>
+    </div>
+  </div>`;
+
+  // Расхождения
+  html += `<div class="analytic-block">
+    <h4>🌡️ Темы с наибольшим разбросом между кругами</h4>
+    <p class="small-note" style="margin:0 0 6px">Где разные команды видят ситуацию очень по-разному — стоит присмотреться к специфике конкретных кругов.</p>
+    <ul>${mostDivergent.map(t => `<li>Разброс <strong>${fmt(t.spread)}</strong> (от ${fmt(t.min)} до ${fmt(t.max)}) — ${escapeHtml(t.theme || shortenQuestion(t.question))}</li>`).join('')}</ul>
+  </div>`;
+
+  // Зоны риска
+  if (riskCircles.length > 0) {
+    html += `<div class="analytic-block">
+      <h4>🚨 Круги в зоне риска</h4>
+      <p class="small-note" style="margin:0 0 6px">Круги с 2+ оценками ниже 7 — стоит проработать с лидерами адресно.</p>
+      <ul>${riskCircles.map(c => `<li><strong>${escapeHtml(c.name)}</strong> (среднее ${fmt(c.avg)}): ${c.redCount > 0 ? `<span style="color:#c93434">${c.redCount} оценок &lt; 6</span>` : ''}${c.redCount > 0 && c.yellowCount > 0 ? ', ' : ''}${c.yellowCount > 0 ? `<span style="color:#a67700">${c.yellowCount} оценок 6,0–6,9</span>` : ''}</li>`).join('')}</ul>
+    </div>`;
+  }
+
+  // На что обратить внимание HR
+  html += `<div class="analytic-block">
+    <h4>💼 Что стоит обсудить с лидерами</h4>
+    <ul>`;
+  worstThemes.slice(0, 2).forEach(t => {
+    const lowCircles = circles.map((name, ci) => ({name, val: rows[themeStats.indexOf(t) ?? 0]?.values[ci]}))
+      .filter(c => c.val !== undefined && c.val < 7)
+      .map(c => `${c.name} (${fmt(c.val)})`);
+    html += `<li>Тема «${escapeHtml(t.theme)}» — наименьшее среднее ${fmt(t.avg)}. ${lowCircles.length ? `Особенно низко в: ${lowCircles.join(', ')}.` : ''}</li>`;
+  });
+  html += `</ul></div>`;
+
+  el.innerHTML = html;
+}
+
+// ============ ПОДСКАЗКИ ДЛЯ РЕКОМЕНДАЦИЙ ============
+// Привязаны к ключевым словам в темах с низкими оценками
+const HINT_LIBRARY = [
+  {
+    keywords: ['разви', 'обуч', 'навык', 'ментор'],
+    title: 'Развитие и обучение',
+    examples: [
+      'Подсветить внутренние сервисы для обучения (Kampus, менторинг)',
+      'Напомнить о возможности 1:1 с лидером для обсуждения IDP',
+      'Рассказать про внешнее обучение и компенсации',
+      'Опубликовать обзор доступных программ развития'
+    ]
+  },
+  {
+    keywords: ['измен', 'change', 'информ'],
+    title: 'Изменения и прозрачность',
+    examples: [
+      'Лидерам — провести командные синки с разъяснением контекста изменений',
+      'Дать ссылку на корпоративную базу знаний с roadmap',
+      'Напомнить о доступности 1:1 с лидером для вопросов о стратегии'
+    ]
+  },
+  {
+    keywords: ['выгор', 'усталос', 'баланс', 'life'],
+    title: 'Выгорание, work-life balance',
+    examples: [
+      'Сервис «Просебя» — консультации специалистов',
+      'Корпоративный спорт и карта «Спорт»',
+      'Корпоративный тренер',
+      'Обсудить нагрузку с лидером, пересобрать приоритеты'
+    ]
+  },
+  {
+    keywords: ['обратн', 'фидбэк', 'feedback'],
+    title: 'Обратная связь',
+    examples: [
+      'Гайд по конструктивному фидбэку для лидеров',
+      'Напомнить про регулярные 1:1',
+      'Внутренний тренинг по non-violent communication'
+    ]
+  },
+  {
+    keywords: ['призн', 'мотив', 'благодар'],
+    title: 'Признание и мотивация',
+    examples: [
+      'Бот благодарностей / канал #ачивки',
+      'Обсудить связь вклада и вознаграждения с лидером',
+      'Корпоративные премии и бенефиты'
+    ]
+  },
+  {
+    keywords: ['HR', 'КЭДО', 'личный кабинет', 'сервис'],
+    title: 'HR-сервисы',
+    examples: [
+      'Гайд по КЭДО и Личному кабинету',
+      'FAQ по типовым HR-вопросам',
+      'Канал поддержки от HR-команды'
+    ]
+  },
+  {
+    keywords: ['доход', 'возна', 'вклад', 'бонус'],
+    title: 'Доход и справедливость',
+    examples: [
+      'Прозрачные обзоры по грейдам и пересмотрам',
+      'Гайд «Как обсудить доход с лидером»',
+      'Напомнить про привязку результатов к бонусам'
+    ]
+  },
+  {
+    keywords: ['роль', 'результат', 'смысл'],
+    title: 'Роль и смысл',
+    examples: [
+      'Командные сессии «зачем мы это делаем»',
+      '1:1 с лидером — обсуждение ожиданий от роли',
+      'Карта ролей и компетенций'
+    ]
+  }
+];
+
+function getHintsForWeakThemes(rows) {
+  // Берём 3 темы с наименьшим средним
+  const themeStats = rows.map(r => ({
+    theme: r.theme, question: r.question, avg: mean(r.values)
+  })).sort((a,b) => a.avg - b.avg).slice(0, 3);
+
+  const hints = [];
+  themeStats.forEach(t => {
+    const searchText = ((t.theme || '') + ' ' + t.question).toLowerCase();
+    HINT_LIBRARY.forEach(lib => {
+      const matched = lib.keywords.some(kw => searchText.includes(kw.toLowerCase()));
+      if (matched && !hints.find(h => h.title === lib.title)) {
+        hints.push({
+          title: lib.title,
+          relatedTheme: t.theme,
+          examples: lib.examples,
+          avg: t.avg
+        });
+      }
+    });
+  });
+  return hints;
+}
+
+// ============ ПОСТ ============
+function renderPost(rows) {
+  const enriched = rows.map(r => ({...r, avg: mean(r.values), med: median(r.values)}));
+  const sorted = [...enriched].sort((a,b) => b.avg - a.avg);
+  const top4 = sorted.slice(0, 4);
+  const bottom3 = sorted.slice(-3).reverse();
+
+  const circleAvgs = lastCircleNames.map((n,ci) => ({ name: n, avg: mean(rows.map(r => r.values[ci])) }));
+  const circlesSorted = [...circleAvgs].sort((a,b) => b.avg - a.avg);
+  const topCircles = circlesSorted.slice(0,3);
+  const worstCircle = circlesSorted[circlesSorted.length-1];
+
+  const month = cfg('cfg-month') || '__месяц__';
+  const responseRate = cfg('cfg-response') || '__';
+
+  const cmp = compareWithPrevious();
+  const hints = getHintsForWeakThemes(rows);
+
+  const placeholder = (text) => `<span class="placeholder-warn">[${text}]</span>`;
+
+  let post = '';
+  post += '@all\n\n';
+  post += '#поделись_мнением\n\n';
+  post += '<strong>Традиционно делимся с вами результатами нашего опроса вовлеченности, удовлетворенности и лояльности — Поделись (мнением) 😉</strong>\n\n';
+  post += '❗ Kind reminder: <strong>участвуя в опросе, вы напрямую влияете на Индекс лидера.</strong> <em>Низкий показатель по Индексу служит сигналом для смены лидера в команде. Высокий показатель, напротив, укрепляет позиции успешного лидера. Это значит, что решение о том, подходит ли лидер команде, теперь принимает сама команда.</em>\n\n';
+  post += '<strong>Как работает опрос ❓</strong>\n\n';
+  post += '• Раз в месяц сотрудникам ПравоТех приходят вопросы от чат-бота. <em>Вопросы не приходят сотрудникам, которые на тот момент находятся на испытательном сроке.</em>\n';
+  post += '• Чат-бот собирает данные каждую неделю: первую неделю мы опрашиваем 25% круга, вторую — следующие 25%, третью и четвертую — ещё по 25%.\n';
+  post += '• Результаты опроса <strong>формируются в обезличенный дашборд (опрос полностью анонимный)</strong>, в котором видна общая информация по кругам.\n\n';
+
+  post += `<strong>Результаты ${month}</strong>\n\n`;
+  post += `Мы опросили 100% сотрудников, <strong>ответили чат-боту ${responseRate}% — спасибо за вашу активность! 🙌</strong>\n\n`;
+
+  // Динамика
+  if (cmp) {
+    const overallDelta = mean(rows.flatMap(r => r.values)) - cmp.overallPrev;
+    if (Math.abs(overallDelta) >= 0.1) {
+      const dir = overallDelta > 0 ? 'вырос' : 'снизился';
+      const emoji = overallDelta > 0 ? '📈' : '📉';
+      post += `${emoji} <strong>Общий показатель ${dir} на ${fmtSigned(overallDelta)} по сравнению с ${escapeHtml(cmp.prevLabel)}.</strong>\n\n`;
+    }
+  }
+
+  post += '<strong>💡 По опросу мы видим:</strong>\n\n';
+  top4.forEach(r => {
+    post += `• ${shortenQuestion(r.question)} <em>(${fmt(r.avg)} — высокий показатель).</em>\n`;
+  });
+  post += '\n';
+
+  if (bottom3.length) {
+    post += '<strong>🟡 На что обратить внимание:</strong>\n\n';
+    bottom3.forEach(r => {
+      post += `• ${shortenQuestion(r.question)} <em>(${fmt(r.avg)}).</em>\n`;
+    });
+    post += '\n';
+  }
+
+  post += `<strong>По кругам:</strong> наиболее высокие средние оценки — у <strong>${topCircles.map(c => `${c.name} (${fmt(c.avg)})`).join(', ')}</strong>. Наибольший простор для работы — у <strong>${worstCircle.name} (${fmt(worstCircle.avg)})</strong>.\n\n`;
+
+  // Рекомендации — ЗАГЛУШКА с подсказками
+  post += '<strong>💛 Рекомендации</strong>\n\n';
+
+  if (hints.length > 0) {
+    post += `${placeholder('подбери рекомендации релевантно результатам')}\n\n`;
+    post += `<em class="hint" data-tip="Подсказки по темам с самыми низкими оценками:\n\n${hints.map(h => '— ' + h.title + ' (' + (h.relatedTheme || '—') + ', ' + fmt(h.avg) + '):\n' + h.examples.map(e => '   • ' + e).join('\n')).join('\n\n')}">💡 наведи курсор, чтобы увидеть подсказки по релевантным форматам рекомендаций</em>\n\n`;
+  } else {
+    post += `${placeholder('подбери рекомендации релевантно результатам')}\n\n`;
+  }
+
+  post += 'Раз в месяц будем делиться результатами — не забывайте отвечать боту, когда он к вам приходит ✨';
+
+  document.getElementById('postOutput').innerHTML = post;
+
+  const missing = [];
+  if (!cfg('cfg-month')) missing.push('месяц');
+  if (!cfg('cfg-response')) missing.push('% ответивших');
+
+  const note = document.getElementById('postNote');
+  if (missing.length) {
+    note.innerHTML = `⚠ В настройках не заполнено: <strong>${missing.join(', ')}</strong>. Желтые плашки в посте — это места, куда нужно подставить значение.`;
+  } else {
+    note.innerHTML = `💡 Раздел «Рекомендации» — заглушка. Подбери конкретные рекомендации релевантно результатам месяца (наведи на подсказку в посте — увидишь варианты по темам с низкими оценками).`;
+  }
+}
+
+function shortenQuestion(q) {
+  if (!q) return '';
+  let s = q.replace(/^Я согласен с утверждением[:\s]*«?/u, '').replace(/»$/, '');
+  s = s.replace(/^По шкале от 1 до 10,\s*/u, '');
+  s = s.replace(/\s*\(где\s*1.*?\)/u, '').replace(/\s*\(1\s*—.*?\)/u, '');
+  s = s.charAt(0).toLowerCase() + s.slice(1);
+  if (s.length > 180) s = s.slice(0, 177) + '...';
+  return s;
+}
+
+// ============ ВКЛАДКИ ============
+function switchTab(name) {
+  ['table','compare','analytics','post'].forEach(t => {
+    document.getElementById('tab-' + t).style.display = (t === name) ? '' : 'none';
+  });
+  document.querySelectorAll('.tab-switch button').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === name);
+  });
+}
+
+// ============ КОПИРОВАНИЕ ============
+function copyPost() {
+  const text = document.getElementById('postOutput').innerText;
+  navigator.clipboard.writeText(text).then(() => toast('Пост скопирован'));
+}
+function downloadPost() {
+  const text = document.getElementById('postOutput').innerText;
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  saveAs(blob, 'post.txt');
+}
+
+// ============ ЗАГРУЗКА ============
+const dz = document.getElementById('dropzone');
+const fi = document.getElementById('fileInput');
+dz.addEventListener('click', () => fi.click());
+fi.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+dz.addEventListener('drop', e => {
+  e.preventDefault();
+  dz.classList.remove('dragover');
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+
+function currentRunLabel() {
+  const month = cfg('cfg-month');
+  return month ? month : 'Без названия (' + new Date().toLocaleDateString('ru-RU') + ')';
+}
+
+function renderAll() {
+  renderTable(lastCircleNames, lastValidRows);
+  renderCompare();
+  renderAnalytics();
+  renderPost(lastValidRows);
+}
+
+function handleFile(file) {
+  document.getElementById('errorBox').innerHTML = '';
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, { type: 'array' });
+      const { circleNames, validRows } = parseWorkbook(wb);
+      lastValidRows = validRows;
+      lastCircleNames = circleNames;
+
+      if (detectedResponseRate) {
+        const current = document.getElementById('cfg-response').value.trim();
+        if (!current || Math.abs(+current - detectedResponseRate) > 0.5) {
+          if (confirm(`В файле найден средний % ответивших по кругам: ${detectedResponseRate}%.\nПодставить?`)) {
+            document.getElementById('cfg-response').value = detectedResponseRate;
+            localStorage.setItem('cfg-response', detectedResponseRate);
+          }
+        }
+      }
+
+      renderAll();
+      document.getElementById('resultsCard').classList.add('shown');
+      document.getElementById('resultsCard').scrollIntoView({ behavior: 'smooth' });
+
+      // Сохраняем в историю
+      const label = currentRunLabel();
+      addToHistory(label, circleNames, validRows, detectedResponseRate || (cfg('cfg-response') ? +cfg('cfg-response') : null));
+      toast(`Сохранено в историю: «${label}»`);
+    } catch (err) {
+      document.getElementById('errorBox').innerHTML = `<div class="error">❌ ${err.message}</div>`;
+      console.error(err);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ============ ЭКСПОРТ ============
+function downloadPng() {
+  html2canvas(document.getElementById('tableWrap'), { scale: 2, backgroundColor: '#ffffff' }).then(canvas => {
+    canvas.toBlob(blob => saveAs(blob, 'Результаты_опроса.png'));
+  });
+}
+
+function downloadXlsx() {
+  const rows = lastValidRows;
+  const circles = lastCircleNames;
+  const aoa = [['Вопрос', ...circles, 'Среднее', 'Медиана']];
+  rows.forEach(r => {
+    const avg = +mean(r.values).toFixed(1);
+    const med = +median(r.values).toFixed(1);
+    aoa.push([r.question, ...r.values.map(v => +v.toFixed(1)), avg, med]);
+  });
+  const colAvgs = circles.map((_,ci) => +mean(rows.map(r => r.values[ci])).toFixed(1));
+  const colMeds = circles.map((_,ci) => +median(rows.map(r => r.values[ci])).toFixed(1));
+  aoa.push(['Среднее', ...colAvgs, '', '']);
+  aoa.push(['Медиана', ...colMeds, '', '']);
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [{wch:50}, ...circles.map(()=>({wch:13})), {wch:11}, {wch:11}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Результаты');
+  XLSX.writeFile(wb, 'Результаты_опроса.xlsx');
+}
+
+// Инициализация
+renderHistory();
+</script>
+</body>
+</html>
