@@ -362,6 +362,73 @@
     margin-bottom: 12px;
     color: #6b4f00;
   }
+
+  /* Файл выбран */
+  .file-selected {
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: var(--accent-soft);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .file-selected.shown { display: flex; }
+  .file-selected .fname { font-weight: 500; color: var(--ink); }
+  .file-selected .fclear { cursor: pointer; color: var(--ink-soft); font-size: 18px; padding: 0 4px; }
+
+  /* Прогресс-бар */
+  .progress-wrap { display: none; margin-top: 16px; }
+  .progress-wrap.shown { display: block; }
+  .progress-bar {
+    height: 8px;
+    background: var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+    transition: width 0.3s ease;
+  }
+  .progress-label {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-top: 8px;
+  }
+
+  /* Большая кнопка анализа */
+  .btn-analyze {
+    margin-top: 14px;
+    width: 100%;
+    padding: 14px;
+    font-size: 15px;
+  }
+  .btn-analyze:disabled {
+    background: #b9b0d8;
+    cursor: not-allowed;
+  }
+  .btn-analyze:disabled::after {
+    content: '';
+  }
+
+  /* Равная ширина колонок кругов в таблице (для PNG-выгрузки) */
+  #resultTable { table-layout: fixed; }
+  #resultTable th.circle-col,
+  #resultTable td.circle-col {
+    width: 88px;
+    min-width: 88px;
+    max-width: 88px;
+  }
+  #resultTable th.summary-col,
+  #resultTable td.summary-col {
+    width: 90px;
+    min-width: 90px;
+  }
+  #resultTable td.q { width: 320px; }
 </style>
 </head>
 <body>
@@ -379,12 +446,14 @@
 
     <div class="row">
       <div class="field">
-        <label>Месяц опроса (для заголовка поста и истории)</label>
+        <label>Месяц опроса <span style="color:#c93434">*</span></label>
         <input id="cfg-month" placeholder="апреля">
+        <p class="small-note" style="margin-top:4px">Обязательное поле — используется для заголовка поста и истории сравнений.</p>
       </div>
       <div class="field">
         <label>Процент ответивших</label>
-        <input id="cfg-response" type="number" step="0.1" placeholder="48">
+        <input id="cfg-response" type="number" step="0.1" placeholder="рассчитается после загрузки файла">
+        <p class="small-note" style="margin-top:4px">Заполнять не обязательно — рассчитается автоматически из листа «Процент прошедших опрос по кругам» после загрузки. Можно при желании поправить вручную.</p>
       </div>
     </div>
 
@@ -404,6 +473,21 @@
     <p class="small-note">
       Поддерживается экспорт из Superset-дашборда «HR | Поделись мнением» (берётся лист «Детализация вопросов» + автоподтягивается % ответивших) и обычный xlsx с темами/вопросами.
     </p>
+
+    <div class="file-selected" id="fileSelected">
+      <span>📄 <span class="fname" id="fileName"></span></span>
+      <span class="fclear" onclick="clearSelectedFile()" title="Убрать файл">✕</span>
+    </div>
+
+    <button class="btn btn-primary btn-analyze" id="analyzeBtn" onclick="runAnalysis()" disabled>
+      ▶ Запустить анализ
+    </button>
+
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-label" id="progressLabel">Обработка...</div>
+    </div>
+
     <div id="errorBox"></div>
   </div>
 
@@ -483,6 +567,7 @@ function loadConfig() {
 function saveConfig() {
   CFG_KEYS.forEach(k => localStorage.setItem(k, document.getElementById(k).value));
   toast('Настройки сохранены');
+  updateAnalyzeBtn();
   if (lastValidRows) renderAll();
 }
 function cfg(key) { return document.getElementById(key).value.trim(); }
@@ -662,25 +747,25 @@ function parseWorkbook(workbook) {
 function renderTable(circleNames, rows) {
   const table = document.getElementById('resultTable');
   let html = '<thead><tr><th></th>';
-  circleNames.forEach(n => html += `<th>${escapeHtml(n)}</th>`);
-  html += '<th>Среднее</th><th>Медиана</th></tr></thead><tbody>';
+  circleNames.forEach(n => html += `<th class="circle-col">${escapeHtml(n)}</th>`);
+  html += '<th class="summary-col">Среднее</th><th class="summary-col">Медиана</th></tr></thead><tbody>';
 
   rows.forEach(r => {
     html += `<tr><td class="q">${escapeHtml(r.question)}</td>`;
-    r.values.forEach(v => html += `<td class="${colorClassFor(v)}">${fmt(v)}</td>`);
+    r.values.forEach(v => html += `<td class="circle-col ${colorClassFor(v)}">${fmt(v)}</td>`);
     const avg = mean(r.values);
     const med = median(r.values);
-    html += `<td class="cell-avg">${fmt(avg)}</td><td class="cell-avg">${fmt(med)}</td></tr>`;
+    html += `<td class="summary-col cell-avg">${fmt(avg)}</td><td class="summary-col cell-avg">${fmt(med)}</td></tr>`;
   });
 
   const colAvgs = circleNames.map((_,ci) => mean(rows.map(r => r.values[ci])));
   const colMeds = circleNames.map((_,ci) => median(rows.map(r => r.values[ci])));
   html += `<tr><td class="cell-sum sum-label">Среднее</td>`;
-  colAvgs.forEach(v => html += `<td class="cell-sum">${fmt(v)}</td>`);
-  html += `<td class="cell-sum"></td><td class="cell-sum"></td></tr>`;
+  colAvgs.forEach(v => html += `<td class="circle-col cell-sum">${fmt(v)}</td>`);
+  html += `<td class="summary-col cell-sum"></td><td class="summary-col cell-sum"></td></tr>`;
   html += `<tr><td class="cell-sum sum-label">Медиана</td>`;
-  colMeds.forEach(v => html += `<td class="cell-sum">${fmt(v)}</td>`);
-  html += `<td class="cell-sum"></td><td class="cell-sum"></td></tr>`;
+  colMeds.forEach(v => html += `<td class="circle-col cell-sum">${fmt(v)}</td>`);
+  html += `<td class="summary-col cell-sum"></td><td class="summary-col cell-sum"></td></tr>`;
   html += '</tbody>';
   table.innerHTML = html;
 }
@@ -1169,19 +1254,72 @@ function downloadPost() {
 // ============ ЗАГРУЗКА ============
 const dz = document.getElementById('dropzone');
 const fi = document.getElementById('fileInput');
+let selectedFile = null;
+
 dz.addEventListener('click', () => fi.click());
-fi.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+fi.addEventListener('change', e => { if (e.target.files[0]) selectFile(e.target.files[0]); });
 dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
 dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
 dz.addEventListener('drop', e => {
   e.preventDefault();
   dz.classList.remove('dragover');
-  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+  if (e.dataTransfer.files[0]) selectFile(e.dataTransfer.files[0]);
 });
 
-function currentRunLabel() {
+// Реагируем на изменения месяца — пересчитываем доступность кнопки
+document.getElementById('cfg-month').addEventListener('input', updateAnalyzeBtn);
+
+function selectFile(file) {
+  selectedFile = file;
+  document.getElementById('fileName').textContent = file.name;
+  document.getElementById('fileSelected').classList.add('shown');
+  document.getElementById('errorBox').innerHTML = '';
+  updateAnalyzeBtn();
+}
+
+function clearSelectedFile() {
+  selectedFile = null;
+  fi.value = '';
+  document.getElementById('fileSelected').classList.remove('shown');
+  updateAnalyzeBtn();
+}
+
+function updateAnalyzeBtn() {
+  const btn = document.getElementById('analyzeBtn');
   const month = cfg('cfg-month');
-  return month ? month : 'Без названия (' + new Date().toLocaleDateString('ru-RU') + ')';
+  const hasFile = !!selectedFile;
+  const hasMonth = !!month;
+
+  if (!hasFile && !hasMonth) {
+    btn.disabled = true;
+    btn.textContent = '▶ Запустить анализ (укажи месяц и загрузи файл)';
+  } else if (!hasMonth) {
+    btn.disabled = true;
+    btn.textContent = '▶ Запустить анализ (укажи месяц в шаге 1)';
+  } else if (!hasFile) {
+    btn.disabled = true;
+    btn.textContent = '▶ Запустить анализ (загрузи файл)';
+  } else {
+    btn.disabled = false;
+    btn.textContent = '▶ Запустить анализ';
+  }
+}
+
+function setProgress(pct, label) {
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = label;
+}
+
+function showProgress() {
+  document.getElementById('progressWrap').classList.add('shown');
+}
+
+function hideProgress() {
+  setTimeout(() => document.getElementById('progressWrap').classList.remove('shown'), 600);
+}
+
+function currentRunLabel() {
+  return cfg('cfg-month') || 'Без названия';
 }
 
 function renderAll() {
@@ -1191,41 +1329,74 @@ function renderAll() {
   renderPost(lastValidRows);
 }
 
-function handleFile(file) {
+async function runAnalysis() {
+  if (!selectedFile) return;
+  if (!cfg('cfg-month')) {
+    alert('Сначала укажи месяц опроса в шаге 1.');
+    return;
+  }
+
   document.getElementById('errorBox').innerHTML = '';
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    try {
-      const data = new Uint8Array(e.target.result);
-      const wb = XLSX.read(data, { type: 'array' });
-      const { circleNames, validRows } = parseWorkbook(wb);
-      lastValidRows = validRows;
-      lastCircleNames = circleNames;
+  document.getElementById('analyzeBtn').disabled = true;
+  showProgress();
 
-      if (detectedResponseRate) {
-        const current = document.getElementById('cfg-response').value.trim();
-        if (!current || Math.abs(+current - detectedResponseRate) > 0.5) {
-          if (confirm(`В файле найден средний % ответивших по кругам: ${detectedResponseRate}%.\nПодставить?`)) {
-            document.getElementById('cfg-response').value = detectedResponseRate;
-            localStorage.setItem('cfg-response', detectedResponseRate);
-          }
-        }
+  try {
+    setProgress(10, 'Читаю файл...');
+    await sleep(150);
+    const data = await readFileAsArrayBuffer(selectedFile);
+
+    setProgress(35, 'Разбираю структуру эксель...');
+    await sleep(100);
+    const wb = XLSX.read(new Uint8Array(data), { type: 'array' });
+
+    setProgress(55, 'Фильтрую вопросы с полными ответами...');
+    await sleep(100);
+    const { circleNames, validRows } = parseWorkbook(wb);
+    lastValidRows = validRows;
+    lastCircleNames = circleNames;
+
+    if (detectedResponseRate) {
+      const current = document.getElementById('cfg-response').value.trim();
+      if (!current || Math.abs(+current - detectedResponseRate) > 0.5) {
+        document.getElementById('cfg-response').value = detectedResponseRate;
+        localStorage.setItem('cfg-response', detectedResponseRate);
       }
-
-      renderAll();
-      document.getElementById('resultsCard').classList.add('shown');
-      document.getElementById('resultsCard').scrollIntoView({ behavior: 'smooth' });
-
-      // Сохраняем в историю
-      const label = currentRunLabel();
-      addToHistory(label, circleNames, validRows, detectedResponseRate || (cfg('cfg-response') ? +cfg('cfg-response') : null));
-      toast(`Сохранено в историю: «${label}»`);
-    } catch (err) {
-      document.getElementById('errorBox').innerHTML = `<div class="error">❌ ${err.message}</div>`;
-      console.error(err);
     }
-  };
-  reader.readAsArrayBuffer(file);
+
+    setProgress(75, 'Считаю агрегаты и сравниваю с прошлым периодом...');
+    await sleep(100);
+
+    setProgress(90, 'Готовлю таблицу, аналитику и пост...');
+    await sleep(100);
+    renderAll();
+
+    setProgress(100, 'Готово ✓');
+    document.getElementById('resultsCard').classList.add('shown');
+    document.getElementById('resultsCard').scrollIntoView({ behavior: 'smooth' });
+
+    // Сохраняем в историю
+    const label = currentRunLabel();
+    addToHistory(label, circleNames, validRows, detectedResponseRate || (cfg('cfg-response') ? +cfg('cfg-response') : null));
+    toast(`Сохранено в историю: «${label}»`);
+
+  } catch (err) {
+    document.getElementById('errorBox').innerHTML = `<div class="error">❌ ${err.message}</div>`;
+    console.error(err);
+    setProgress(0, '');
+  } finally {
+    hideProgress();
+    updateAnalyzeBtn();
+  }
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function readFileAsArrayBuffer(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result);
+    reader.onerror = () => reject(new Error('Не удалось прочитать файл'));
+    reader.readAsArrayBuffer(file);
+  });
 }
 
 // ============ ЭКСПОРТ ============
@@ -1258,6 +1429,7 @@ function downloadXlsx() {
 
 // Инициализация
 renderHistory();
+updateAnalyzeBtn();
 </script>
 </body>
 </html>
