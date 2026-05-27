@@ -415,20 +415,27 @@
     content: '';
   }
 
-  /* Равная ширина колонок кругов в таблице (для PNG-выгрузки) */
-  #resultTable { table-layout: fixed; }
+  /* Колонки: левый широкий для вопроса, все ячейки значений равны и близки к квадратным */
+  #resultTable { table-layout: fixed; width: 100%; }
+  #resultTable th:first-child,
+  #resultTable td.q,
+  #resultTable td.sum-label { width: 34%; }
   #resultTable th.circle-col,
-  #resultTable td.circle-col {
-    width: 88px;
-    min-width: 88px;
-    max-width: 88px;
-  }
+  #resultTable td.circle-col,
   #resultTable th.summary-col,
   #resultTable td.summary-col {
-    width: 90px;
-    min-width: 90px;
+    width: 5.5%;
   }
-  #resultTable td.q { width: 320px; }
+  /* Высота строк подстраивается под ширину колонки значений, давая близкие к квадратным ячейки */
+  #resultTable td.circle-col,
+  #resultTable td.summary-col {
+    height: 64px;
+    padding: 4px;
+  }
+  #resultTable td.cell-sum.circle-col,
+  #resultTable td.cell-sum.summary-col {
+    height: 40px;
+  }
 </style>
 </head>
 <body>
