@@ -613,7 +613,7 @@
       <div class="field">
         <label>Router AI endpoint</label>
         <input id="cfg-ai-endpoint" placeholder="https://openrouter.ai/api/v1/chat/completions">
-        <p class="small-note" style="margin-top:4px">Если оставить пустым, будет использован OpenRouter-compatible endpoint по умолчанию.</p>
+        <p class="small-note" style="margin-top:4px">Endpoint должен разрешать browser CORS с GitHub Pages. Если router CORS не поддерживает, нужен proxy endpoint.</p>
       </div>
       <div class="field">
         <label>Router AI model</label>
@@ -1515,9 +1515,7 @@ async function runAiAnalytics() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${settings.key}`,
-        'HTTP-Referer': window.location.origin,
-        'X-Title': 'Podelis mneniem AI analytics'
+        'Authorization': `Bearer ${settings.key}`
       },
       body: JSON.stringify({
         model: settings.model,
@@ -1547,7 +1545,12 @@ async function runAiAnalytics() {
     output.classList.add('shown');
     setAiStatus('Готово. Проверь выводы перед тем, как использовать их в коммуникации.');
   } catch (err) {
-    output.innerHTML = `<strong>Не удалось получить AI-аналитику.</strong>\n${escapeHtml(err.message || String(err))}\n\nПроверь endpoint, модель, ключ и доступность CORS у вашего AI-router.`;
+    const message = err.message || String(err);
+    const isNetworkError = err instanceof TypeError && /fetch/i.test(message);
+    const hint = isNetworkError
+      ? 'Браузер не смог выполнить запрос. Чаще всего это CORS/preflight: AI-router не разрешает запросы напрямую со страницы GitHub Pages. Проверьте, что endpoint отвечает на OPTIONS и разрешает Origin, Authorization и Content-Type. Если CORS включить нельзя, нужен небольшой proxy endpoint между Pages и AI-router.'
+      : 'Проверь endpoint, модель и ключ AI-router.';
+    output.innerHTML = `<strong>Не удалось получить AI-аналитику.</strong>\n${escapeHtml(message)}\n\n${escapeHtml(hint)}`;
     output.classList.add('shown');
     setAiStatus('');
   } finally {
