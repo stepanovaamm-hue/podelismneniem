@@ -323,6 +323,145 @@
   .badge-down { background: #c93434; }
   .badge-flat { background: #888; }
 
+  .result-intro {
+    color: var(--ink-soft);
+    font-size: 13px;
+    margin: -6px 0 16px;
+  }
+  .executive-summary {
+    background: #fafaff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .summary-item {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+  }
+  .summary-label {
+    color: var(--ink-soft);
+    font-size: 12px;
+    margin-bottom: 4px;
+  }
+  .summary-value {
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.1;
+  }
+  .summary-note {
+    color: var(--ink-soft);
+    font-size: 12px;
+    margin-top: 4px;
+  }
+  .summary-line {
+    font-size: 13px;
+    line-height: 1.55;
+    margin: 0;
+  }
+  .priority-list {
+    display: grid;
+    gap: 8px;
+  }
+  .priority-item {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    background: white;
+  }
+  .priority-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+    margin-bottom: 4px;
+  }
+  .priority-title {
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .priority-meta {
+    color: var(--ink-soft);
+    font-size: 12px;
+    line-height: 1.45;
+  }
+  .priority-high { background: #c93434; }
+  .priority-medium { background: #a67700; }
+  .priority-watch { background: #4A2BD9; }
+  .leader-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 10px;
+  }
+  .leader-profile {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    background: white;
+  }
+  .leader-profile h5 {
+    margin: 0 0 8px;
+    font-size: 13px;
+  }
+  .leader-kpis {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+  .leader-kpis span {
+    background: #f5f0ff;
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .leader-detail {
+    color: var(--ink-soft);
+    font-size: 12px;
+    line-height: 1.45;
+  }
+  .post-card {
+    border-top: 4px solid var(--accent);
+  }
+  .ai-panel {
+    border-color: #cfc4ff;
+    background: #fbf9ff;
+  }
+  .ai-output {
+    display: none;
+    margin-top: 12px;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    font-size: 13px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+  }
+  .ai-output.shown { display: block; }
+  .ai-status {
+    color: var(--ink-soft);
+    font-size: 12px;
+    margin-top: 8px;
+  }
+  @media (max-width: 900px) {
+    .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width: 560px) {
+    .summary-grid { grid-template-columns: 1fr; }
+    .priority-top { display: block; }
+    .priority-top .badge { margin-top: 6px; }
+  }
+
   .history-list { font-size: 13px; }
   .history-item {
     display: flex;
@@ -470,6 +609,24 @@
       </div>
     </div>
 
+    <div class="row">
+      <div class="field">
+        <label>Router AI endpoint</label>
+        <input id="cfg-ai-endpoint" placeholder="https://openrouter.ai/api/v1/chat/completions">
+        <p class="small-note" style="margin-top:4px">Если оставить пустым, будет использован OpenRouter-compatible endpoint по умолчанию.</p>
+      </div>
+      <div class="field">
+        <label>Router AI model</label>
+        <input id="cfg-ai-model" placeholder="openai/gpt-4o-mini">
+        <p class="small-note" style="margin-top:4px">Можно указать любую доступную модель вашего AI-router.</p>
+      </div>
+    </div>
+    <div class="field">
+      <label>Router AI API key</label>
+      <input id="cfg-ai-key" type="password" placeholder="sk-or-...">
+      <p class="small-note" style="margin-top:4px">Ключ не сохраняется в коде и localStorage. Вставьте его перед запуском AI-аналитики.</p>
+    </div>
+
     <div class="actions">
       <button class="btn btn-ghost" onclick="saveConfig()">💾 Сохранить настройки</button>
     </div>
@@ -506,22 +663,25 @@
 
   <!-- ИСТОРИЯ -->
   <div class="card" id="historyCard">
-    <h2>📚 История загрузок</h2>
+    <h2>📚 История и сравнение периодов</h2>
     <p class="small-note" style="margin-top:-8px;margin-bottom:10px">
-      Используется для сравнения с прошлым периодом.
+      Это рабочая история для аналитики: по ней считаются изменения, повторяющиеся риски и динамика к прошлому периоду.
     </p>
     <div id="historyList" class="history-list"></div>
   </div>
 
-  <!-- РЕЗУЛЬТАТ -->
+  <!-- АНАЛИТИКА -->
   <div class="card results" id="resultsCard">
-    <h2><span class="step-num">3</span> Результаты</h2>
+    <h2><span class="step-num">3</span> Аналитика для лидеров и держателей процесса</h2>
+    <p class="result-intro">
+      Здесь собирается управленческий слой: общий вывод, динамика, зоны риска, приоритеты и карточки кругов.
+    </p>
+    <div id="executiveSummary"></div>
 
     <div class="tab-switch">
       <button class="active" data-tab="table" onclick="switchTab('table')">Таблица</button>
       <button data-tab="compare" onclick="switchTab('compare')">Сравнение с прошлым</button>
-      <button data-tab="analytics" onclick="switchTab('analytics')">📊 Общая аналитика</button>
-      <button data-tab="post" onclick="switchTab('post')">Пост</button>
+      <button data-tab="analytics" onclick="switchTab('analytics')">📊 Разбор рисков</button>
     </div>
 
     <!-- Вкладка: таблица -->
@@ -551,18 +711,33 @@
       <p class="small-note" style="margin-top:0;margin-bottom:14px">
         💼 <strong>Внутренний раздел для HR.</strong> Этот блок не идёт в публикацию, только для анализа.
       </p>
+      <div class="analytic-block ai-panel">
+        <h4>🤖 AI-аналитика для лидеров</h4>
+        <p class="small-note" style="margin:0 0 10px">
+          AI получает только агрегированные оценки, динамику и зоны риска. Используйте результат как черновик управленческих выводов, а не как финальное решение.
+        </p>
+        <div class="actions" style="margin:0">
+          <button class="btn btn-primary" id="aiAnalyzeBtn" onclick="runAiAnalytics()">Сформировать AI-аналитику</button>
+        </div>
+        <div class="ai-status" id="aiStatus"></div>
+        <div class="ai-output" id="aiAnalysisOutput"></div>
+      </div>
       <div id="analyticsContent"></div>
     </div>
+  </div>
 
-    <!-- Вкладка: пост -->
-    <div id="tab-post" style="display:none">
-      <div class="post-output" id="postOutput"></div>
-      <div class="actions">
-        <button class="btn btn-primary" onclick="copyPost()">📋 Скопировать пост</button>
-        <button class="btn btn-ghost" onclick="downloadPost()">⬇ Скачать .txt</button>
-      </div>
-      <p class="small-note" id="postNote"></p>
+  <!-- ПОСТ -->
+  <div class="card results post-card" id="postCard">
+    <h2><span class="step-num">4</span> Пост для публикации</h2>
+    <p class="result-intro">
+      Отдельная история для коммуникации: готовый черновик поста с цифрами из анализа и местами, где нужно дописать человеческие рекомендации.
+    </p>
+    <div class="post-output" id="postOutput"></div>
+    <div class="actions">
+      <button class="btn btn-primary" onclick="copyPost()">📋 Скопировать пост</button>
+      <button class="btn btn-ghost" onclick="downloadPost()">⬇ Скачать .txt</button>
     </div>
+    <p class="small-note" id="postNote"></p>
   </div>
 </div>
 
@@ -570,7 +745,7 @@
 
 <script>
 // ============ КОНФИГ ============
-const CFG_KEYS = ['cfg-month','cfg-response'];
+const CFG_KEYS = ['cfg-month','cfg-response','cfg-ai-endpoint','cfg-ai-model'];
 function loadConfig() {
   CFG_KEYS.forEach(k => {
     const v = localStorage.getItem(k);
@@ -919,6 +1094,155 @@ function renderCompare() {
   el.innerHTML = html;
 }
 
+// ============ УПРАВЛЕНЧЕСКИЕ СВОДКИ ============
+const PROCESS_AREAS = [
+  { name: 'Лидерство и управление', owner: 'лидеры кругов', keywords: ['лидер', 'руковод', 'управ', '1:1', 'обратн', 'фидбэк'] },
+  { name: 'Коммуникации и прозрачность', owner: 'коммуникации / лидеры', keywords: ['информ', 'коммуникац', 'прозрач', 'измен', 'стратег', 'понят'] },
+  { name: 'Нагрузка и процессы', owner: 'держатели процессов', keywords: ['нагруз', 'процесс', 'приоритет', 'срок', 'выгор', 'баланс', 'устал'] },
+  { name: 'Развитие и обучение', owner: 'HR / лидеры', keywords: ['разви', 'обуч', 'навык', 'карьер', 'ментор', 'рост'] },
+  { name: 'Мотивация и признание', owner: 'HR / лидеры', keywords: ['мотив', 'призн', 'благодар', 'доход', 'возна', 'вклад', 'справедлив'] },
+  { name: 'Инструменты и сервисы', owner: 'владельцы сервисов', keywords: ['инструмент', 'сервис', 'HR', 'КЭДО', 'кабинет', 'система'] }
+];
+
+function themeTitle(t) {
+  return t.theme || shortenQuestion(t.question);
+}
+
+function getProcessArea(theme, question) {
+  const text = ((theme || '') + ' ' + (question || '')).toLowerCase();
+  const match = PROCESS_AREAS.find(area => area.keywords.some(kw => text.includes(kw.toLowerCase())));
+  return match || { name: 'Общий опыт сотрудника', owner: 'HR / лидеры' };
+}
+
+function buildThemeStats(rows) {
+  return rows.map((r, index) => {
+    const values = r.values;
+    const avg = mean(values);
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    return {
+      index,
+      theme: r.theme,
+      question: r.question,
+      values,
+      avg,
+      med: median(values),
+      min,
+      max,
+      spread: max - min,
+      lowCount: values.filter(v => v < 7).length,
+      redCount: values.filter(v => v < 6).length
+    };
+  });
+}
+
+function buildCircleStats(rows, circles, cmp) {
+  return circles.map((name, ci) => {
+    const vals = rows.map(r => r.values[ci]);
+    const sortedRows = rows.map((r, ri) => ({ row: r, value: r.values[ci], index: ri })).sort((a,b) => a.value - b.value);
+    const cmpCircle = cmp ? cmp.byCircle.find(c => c.name === name) : null;
+    return {
+      name,
+      avg: mean(vals),
+      med: median(vals),
+      min: Math.min(...vals),
+      max: Math.max(...vals),
+      lowCount: vals.filter(v => v < 7).length,
+      weakest: sortedRows[0],
+      strongest: sortedRows[sortedRows.length - 1],
+      delta: cmpCircle && cmpCircle.delta !== null ? cmpCircle.delta : null
+    };
+  });
+}
+
+function buildPriorityItems(themeStats, cmp) {
+  return themeStats.map(t => {
+    const cmpQuestion = cmp ? cmp.byQuestion.find(q => q.question === t.question) : null;
+    const delta = cmpQuestion && cmpQuestion.delta !== null ? cmpQuestion.delta : null;
+    const process = getProcessArea(t.theme, t.question);
+    const lowShare = t.lowCount / t.values.length;
+    const fallingPenalty = delta !== null && delta < 0 ? Math.abs(delta) * 1.3 : 0;
+    const score = Math.max(0, 8 - t.avg) * 1.2 + lowShare + t.redCount * 0.45 + Math.max(0, t.spread - 1) * 0.25 + fallingPenalty;
+    return { ...t, delta, process, priorityScore: score };
+  }).sort((a,b) => b.priorityScore - a.priorityScore);
+}
+
+function priorityLabel(item) {
+  if (item.avg < 6.5 || item.redCount > 0 || (item.delta !== null && item.delta < -0.3)) return 'Высокий';
+  if (item.avg < 7.2 || item.lowCount >= 2 || item.spread >= 2) return 'Средний';
+  return 'Наблюдать';
+}
+
+function priorityClass(item) {
+  const label = priorityLabel(item);
+  if (label === 'Высокий') return 'priority-high';
+  if (label === 'Средний') return 'priority-medium';
+  return 'priority-watch';
+}
+
+function renderDeltaBadge(delta) {
+  if (delta === null || delta === undefined) return '';
+  const cls = delta > 0.05 ? 'badge-up' : (delta < -0.05 ? 'badge-down' : 'badge-flat');
+  return `<span class="badge ${cls}">${fmtSigned(delta)}</span>`;
+}
+
+function renderExecutiveSummary() {
+  const el = document.getElementById('executiveSummary');
+  const rows = lastValidRows;
+  const circles = lastCircleNames;
+  const cmp = compareWithPrevious();
+  const themeStats = buildThemeStats(rows);
+  const circleStats = buildCircleStats(rows, circles, cmp);
+  const priorities = buildPriorityItems(themeStats, cmp);
+
+  const allValues = rows.flatMap(r => r.values);
+  const overallAvg = mean(allValues);
+  const overallDelta = cmp ? overallAvg - cmp.overallPrev : null;
+  const bestTheme = [...themeStats].sort((a,b) => b.avg - a.avg)[0];
+  const mainRisk = priorities[0];
+  const weakCircle = [...circleStats].sort((a,b) => a.avg - b.avg)[0];
+  const responseRate = cfg('cfg-response') || detectedResponseRate;
+  const trendText = overallDelta === null
+    ? 'нет прошлого периода'
+    : overallDelta > 0.05
+      ? 'рост к прошлому периоду'
+      : overallDelta < -0.05
+        ? 'снижение к прошлому периоду'
+        : 'без заметного изменения';
+
+  el.innerHTML = `<div class="executive-summary">
+    <div class="summary-grid">
+      <div class="summary-item">
+        <div class="summary-label">Общий индекс</div>
+        <div class="summary-value">${fmt(overallAvg)}</div>
+        <div class="summary-note">медиана ${fmt(median(allValues))}</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-label">Динамика</div>
+        <div class="summary-value">${overallDelta === null ? '—' : fmtSigned(overallDelta)}</div>
+        <div class="summary-note">${trendText}</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-label">Участие</div>
+        <div class="summary-value">${responseRate ? responseRate + '%' : '—'}</div>
+        <div class="summary-note">используется в посте</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-label">Фокус месяца</div>
+        <div class="summary-value">${priorityLabel(mainRisk)}</div>
+        <div class="summary-note">${escapeHtml(mainRisk.process.name)}</div>
+      </div>
+    </div>
+    <p class="summary-line">
+      <strong>Главный вывод:</strong> сильнее всего сейчас выглядит «${escapeHtml(themeTitle(bestTheme))}» (${fmt(bestTheme.avg)}), а первым управленческим приоритетом стоит разобрать «${escapeHtml(themeTitle(mainRisk))}» (${fmt(mainRisk.avg)}).
+      ${overallDelta !== null ? `Динамика общего индекса: ${renderDeltaBadge(overallDelta)}.` : 'Для динамики нужен ещё один период в истории.'}
+    </p>
+    <p class="summary-line">
+      <strong>Кому смотреть:</strong> ${escapeHtml(mainRisk.process.owner)} по зоне «${escapeHtml(mainRisk.process.name)}»; лидеру круга ${escapeHtml(weakCircle.name)} — отдельный разбор точек напряжения.
+    </p>
+  </div>`;
+}
+
 // ============ ОБЩАЯ АНАЛИТИКА (для HR) ============
 function renderAnalytics() {
   const el = document.getElementById('analyticsContent');
@@ -930,34 +1254,25 @@ function renderAnalytics() {
   const overallMed = median(allValues);
 
   // По темам
-  const themeStats = rows.map(r => ({
-    theme: r.theme, question: r.question,
-    avg: mean(r.values), med: median(r.values),
-    min: Math.min(...r.values), max: Math.max(...r.values),
-    spread: Math.max(...r.values) - Math.min(...r.values)
-  }));
+  const themeStats = buildThemeStats(rows);
   const worstThemes = [...themeStats].sort((a,b) => a.avg - b.avg).slice(0, 3);
   const bestThemes = [...themeStats].sort((a,b) => b.avg - a.avg).slice(0, 3);
   const mostDivergent = [...themeStats].sort((a,b) => b.spread - a.spread).slice(0, 3);
 
-  // По кругам
-  const circleStats = circles.map((name, ci) => {
-    const vals = rows.map(r => r.values[ci]);
-    return { name, avg: mean(vals), med: median(vals), min: Math.min(...vals), max: Math.max(...vals) };
-  });
-  const worstCircles = [...circleStats].sort((a,b) => a.avg - b.avg).slice(0, 3);
-  const bestCircles = [...circleStats].sort((a,b) => b.avg - a.avg).slice(0, 3);
-
-  // Зоны риска: круги, у которых много низких оценок
-  const riskCircles = circles.map((name, ci) => {
-    const vals = rows.map(r => r.values[ci]);
-    const redCount = vals.filter(v => v < 6).length;
-    const yellowCount = vals.filter(v => v >= 6 && v < 7).length;
-    return { name, redCount, yellowCount, totalLow: redCount + yellowCount, avg: mean(vals) };
-  }).filter(c => c.totalLow >= 2).sort((a,b) => b.totalLow - a.totalLow);
-
   // Сравнение с прошлым
   const cmp = compareWithPrevious();
+  const circleStats = buildCircleStats(rows, circles, cmp);
+  const worstCircles = [...circleStats].sort((a,b) => a.avg - b.avg).slice(0, 3);
+  const bestCircles = [...circleStats].sort((a,b) => b.avg - a.avg).slice(0, 3);
+  const priorityItems = buildPriorityItems(themeStats, cmp).slice(0, 5);
+
+  // Зоны риска: круги, у которых много низких оценок
+  const riskCircles = circleStats.map(c => {
+    const vals = rows.map(r => r.values[circles.indexOf(c.name)]);
+    const redCount = vals.filter(v => v < 6).length;
+    const yellowCount = vals.filter(v => v >= 6 && v < 7).length;
+    return { ...c, redCount, yellowCount, totalLow: redCount + yellowCount };
+  }).filter(c => c.totalLow >= 2).sort((a,b) => b.totalLow - a.totalLow);
 
   let html = '';
 
@@ -982,6 +1297,27 @@ function renderAnalytics() {
     <div class="analytic-block">
       <h4>⚠️ Темы с наименьшими оценками</h4>
       <ul>${worstThemes.map(t => `<li><strong>${fmt(t.avg)}</strong> — ${escapeHtml(t.theme || shortenQuestion(t.question))}</li>`).join('')}</ul>
+    </div>
+  </div>`;
+
+  // Приоритеты для держателей процессов
+  html += `<div class="analytic-block">
+    <h4>🎯 Приоритеты для держателей процесса</h4>
+    <p class="small-note" style="margin:0 0 10px">Сортировка учитывает низкую оценку, падение к прошлому периоду, количество кругов ниже 7 и разброс между кругами.</p>
+    <div class="priority-list">
+      ${priorityItems.map(item => `<div class="priority-item">
+        <div class="priority-top">
+          <div class="priority-title">${escapeHtml(themeTitle(item))}</div>
+          <span class="badge ${priorityClass(item)}">${priorityLabel(item)}</span>
+        </div>
+        <div class="priority-meta">
+          Среднее ${fmt(item.avg)} · ниже 7: ${item.lowCount}/${item.values.length} кругов · разброс ${fmt(item.spread)}
+          ${item.delta !== null ? ` · динамика ${renderDeltaBadge(item.delta)}` : ''}
+        </div>
+        <div class="priority-meta">
+          Владелец: <strong>${escapeHtml(item.process.owner)}</strong> · зона: ${escapeHtml(item.process.name)}
+        </div>
+      </div>`).join('')}
     </div>
   </div>`;
 
@@ -1030,12 +1366,31 @@ function renderAnalytics() {
     </div>`;
   }
 
+  // Карточки кругов для лидеров
+  html += `<div class="analytic-block">
+    <h4>🧭 Карточки кругов для лидеров</h4>
+    <p class="small-note" style="margin:0 0 10px">Короткий профиль помогает лидеру быстро понять: общий уровень, динамику, главную сильную и слабую точку.</p>
+    <div class="leader-grid">
+      ${circleStats.map(c => `<div class="leader-profile">
+        <h5>${escapeHtml(c.name)}</h5>
+        <div class="leader-kpis">
+          <span>среднее ${fmt(c.avg)}</span>
+          <span>медиана ${fmt(c.med)}</span>
+          ${c.delta !== null ? `<span>динамика ${fmtSigned(c.delta)}</span>` : ''}
+        </div>
+        <div class="leader-detail"><strong>Сильнее всего:</strong> ${escapeHtml(shortenQuestion(c.strongest.row.question))} (${fmt(c.strongest.value)})</div>
+        <div class="leader-detail"><strong>Зона внимания:</strong> ${escapeHtml(shortenQuestion(c.weakest.row.question))} (${fmt(c.weakest.value)})</div>
+        <div class="leader-detail">Ниже 7: ${c.lowCount} из ${rows.length} вопросов.</div>
+      </div>`).join('')}
+    </div>
+  </div>`;
+
   // На что обратить внимание HR
   html += `<div class="analytic-block">
     <h4>💼 Что стоит обсудить с лидерами</h4>
     <ul>`;
   worstThemes.slice(0, 2).forEach(t => {
-    const lowCircles = circles.map((name, ci) => ({name, val: rows[themeStats.indexOf(t) ?? 0]?.values[ci]}))
+    const lowCircles = circles.map((name, ci) => ({name, val: t.values[ci]}))
       .filter(c => c.val !== undefined && c.val < 7)
       .map(c => `${c.name} (${fmt(c.val)})`);
     html += `<li>Тема «${escapeHtml(t.theme)}» — наименьшее среднее ${fmt(t.avg)}. ${lowCircles.length ? `Особенно низко в: ${lowCircles.join(', ')}.` : ''}</li>`;
@@ -1043,6 +1398,161 @@ function renderAnalytics() {
   html += `</ul></div>`;
 
   el.innerHTML = html;
+}
+
+// ============ AI-АНАЛИТИКА ============
+const DEFAULT_AI_ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
+const DEFAULT_AI_MODEL = 'openai/gpt-4o-mini';
+
+function getAiSettings() {
+  return {
+    endpoint: cfg('cfg-ai-endpoint') || DEFAULT_AI_ENDPOINT,
+    model: cfg('cfg-ai-model') || DEFAULT_AI_MODEL,
+    key: cfg('cfg-ai-key')
+  };
+}
+
+function buildAiAnalyticsInput() {
+  const rows = lastValidRows;
+  const circles = lastCircleNames;
+  const cmp = compareWithPrevious();
+  const themeStats = buildThemeStats(rows);
+  const circleStats = buildCircleStats(rows, circles, cmp);
+  const priorities = buildPriorityItems(themeStats, cmp);
+  const allValues = rows.flatMap(r => r.values);
+
+  return {
+    period: currentRunLabel(),
+    responseRate: cfg('cfg-response') || detectedResponseRate || null,
+    overall: {
+      average: +mean(allValues).toFixed(2),
+      median: +median(allValues).toFixed(2),
+      previousAverage: cmp ? +cmp.overallPrev.toFixed(2) : null,
+      delta: cmp ? +(mean(allValues) - cmp.overallPrev).toFixed(2) : null
+    },
+    topStrengths: [...themeStats].sort((a,b) => b.avg - a.avg).slice(0, 5).map(t => ({
+      theme: themeTitle(t),
+      question: shortenQuestion(t.question),
+      average: +t.avg.toFixed(2)
+    })),
+    topRisks: priorities.slice(0, 7).map(t => ({
+      theme: themeTitle(t),
+      question: shortenQuestion(t.question),
+      average: +t.avg.toFixed(2),
+      median: +t.med.toFixed(2),
+      lowCircles: t.lowCount,
+      redCircles: t.redCount,
+      spread: +t.spread.toFixed(2),
+      delta: t.delta === null ? null : +t.delta.toFixed(2),
+      processArea: t.process.name,
+      owner: t.process.owner,
+      priority: priorityLabel(t)
+    })),
+    circleProfiles: circleStats.map(c => ({
+      circle: c.name,
+      average: +c.avg.toFixed(2),
+      median: +c.med.toFixed(2),
+      delta: c.delta === null ? null : +c.delta.toFixed(2),
+      lowQuestionCount: c.lowCount,
+      strongestQuestion: shortenQuestion(c.strongest.row.question),
+      strongestValue: +c.strongest.value.toFixed(2),
+      weakestQuestion: shortenQuestion(c.weakest.row.question),
+      weakestValue: +c.weakest.value.toFixed(2)
+    })),
+    divergentTopics: [...themeStats].sort((a,b) => b.spread - a.spread).slice(0, 5).map(t => ({
+      theme: themeTitle(t),
+      question: shortenQuestion(t.question),
+      average: +t.avg.toFixed(2),
+      min: +t.min.toFixed(2),
+      max: +t.max.toFixed(2),
+      spread: +t.spread.toFixed(2)
+    }))
+  };
+}
+
+function aiPromptFromData(data) {
+  return `Проанализируй агрегированные результаты ежемесячного опроса "Поделись мнением".
+
+Дай ответ на русском языке, коротко и управленчески полезно.
+Структура ответа:
+1. Главный вывод месяца для лидеров.
+2. 3-5 приоритетов для держателей процессов: проблема, владелец, почему важно, первое действие.
+3. Что отдельно обсудить с лидерами кругов.
+4. Что можно безопасно использовать в публичном посте, а что лучше оставить во внутренней аналитике.
+5. Рекомендации на следующий месяц и метрики проверки.
+
+Не выдумывай персональные данные, причины или факты, которых нет в агрегатах. Если причина неочевидна, так и напиши.
+
+Данные:
+${JSON.stringify(data, null, 2)}`;
+}
+
+function setAiStatus(text) {
+  document.getElementById('aiStatus').textContent = text || '';
+}
+
+async function runAiAnalytics() {
+  if (!lastValidRows || !lastCircleNames) {
+    alert('Сначала загрузи файл и запусти анализ.');
+    return;
+  }
+
+  const settings = getAiSettings();
+  if (!settings.key) {
+    alert('Добавь Router AI API key в настройках.');
+    return;
+  }
+
+  const btn = document.getElementById('aiAnalyzeBtn');
+  const output = document.getElementById('aiAnalysisOutput');
+  btn.disabled = true;
+  output.classList.remove('shown');
+  setAiStatus('Отправляю агрегированную сводку в AI...');
+
+  try {
+    const data = buildAiAnalyticsInput();
+    const response = await fetch(settings.endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${settings.key}`,
+        'HTTP-Referer': window.location.origin,
+        'X-Title': 'Поделись мнением — AI analytics'
+      },
+      body: JSON.stringify({
+        model: settings.model,
+        temperature: 0.2,
+        messages: [
+          {
+            role: 'system',
+            content: 'Ты опытный HR-аналитик и партнер лидеров. Работаешь только с агрегированными данными, не делаешь выводов про отдельных людей, пишешь конкретно и бережно.'
+          },
+          { role: 'user', content: aiPromptFromData(data) }
+        ]
+      })
+    });
+
+    let payload = null;
+    try { payload = await response.json(); } catch(e) {}
+
+    if (!response.ok) {
+      const message = payload?.error?.message || payload?.message || response.statusText || 'ошибка запроса';
+      throw new Error(`${response.status}: ${message}`);
+    }
+
+    const text = payload?.choices?.[0]?.message?.content || payload?.output_text || '';
+    if (!text) throw new Error('AI-router вернул пустой ответ');
+
+    output.innerHTML = escapeHtml(text);
+    output.classList.add('shown');
+    setAiStatus('Готово. Проверь выводы перед тем, как использовать их в коммуникации.');
+  } catch (err) {
+    output.innerHTML = `<strong>Не удалось получить AI-аналитику.</strong>\n${escapeHtml(err.message || String(err))}\n\nПроверь endpoint, модель, ключ и доступность CORS у вашего AI-router.`;
+    output.classList.add('shown');
+    setAiStatus('');
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 // ============ ПОДСКАЗКИ ДЛЯ РЕКОМЕНДАЦИЙ ============
@@ -1245,7 +1755,7 @@ function shortenQuestion(q) {
 
 // ============ ВКЛАДКИ ============
 function switchTab(name) {
-  ['table','compare','analytics','post'].forEach(t => {
+  ['table','compare','analytics'].forEach(t => {
     document.getElementById('tab-' + t).style.display = (t === name) ? '' : 'none';
   });
   document.querySelectorAll('.tab-switch button').forEach(b => {
@@ -1337,6 +1847,7 @@ function currentRunLabel() {
 
 function renderAll() {
   renderTable(lastCircleNames, lastValidRows);
+  renderExecutiveSummary();
   renderCompare();
   renderAnalytics();
   renderPost(lastValidRows);
@@ -1381,10 +1892,14 @@ async function runAnalysis() {
 
     setProgress(90, 'Готовлю таблицу, аналитику и пост...');
     await sleep(100);
+    document.getElementById('aiAnalysisOutput').classList.remove('shown');
+    document.getElementById('aiAnalysisOutput').innerHTML = '';
+    setAiStatus('');
     renderAll();
 
     setProgress(100, 'Готово ✓');
     document.getElementById('resultsCard').classList.add('shown');
+    document.getElementById('postCard').classList.add('shown');
     document.getElementById('resultsCard').scrollIntoView({ behavior: 'smooth' });
 
     // Сохраняем в историю
