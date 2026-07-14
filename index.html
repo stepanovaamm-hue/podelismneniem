@@ -612,12 +612,12 @@
     <div class="row">
       <div class="field">
         <label>Router AI endpoint</label>
-        <input id="cfg-ai-endpoint" placeholder="https://openrouter.ai/api/v1/chat/completions">
+        <input id="cfg-ai-endpoint" placeholder="https://routerai.ru/api/v1/chat/completions">
         <p class="small-note" style="margin-top:4px">Endpoint должен разрешать browser CORS с GitHub Pages. Если router CORS не поддерживает, нужен proxy endpoint.</p>
       </div>
       <div class="field">
         <label>Router AI model</label>
-        <input id="cfg-ai-model" placeholder="openai/gpt-4o-mini">
+        <input id="cfg-ai-model" placeholder="openai/gpt-4o">
         <p class="small-note" style="margin-top:4px">Можно указать любую доступную модель вашего AI-router.</p>
       </div>
     </div>
@@ -749,7 +749,17 @@ const CFG_KEYS = ['cfg-month','cfg-response','cfg-ai-endpoint','cfg-ai-model'];
 function loadConfig() {
   CFG_KEYS.forEach(k => {
     const v = localStorage.getItem(k);
-    if (v !== null) document.getElementById(k).value = v;
+    if (v !== null) {
+      if (k === 'cfg-ai-endpoint' && v.includes('openrouter.ai')) {
+        localStorage.removeItem(k);
+        return;
+      }
+      if (k === 'cfg-ai-model' && v === 'openai/gpt-4o-mini') {
+        localStorage.removeItem(k);
+        return;
+      }
+      document.getElementById(k).value = v;
+    }
   });
 }
 function saveConfig() {
@@ -1401,8 +1411,8 @@ function renderAnalytics() {
 }
 
 // ============ AI-АНАЛИТИКА ============
-const DEFAULT_AI_ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
-const DEFAULT_AI_MODEL = 'openai/gpt-4o-mini';
+const DEFAULT_AI_ENDPOINT = 'https://routerai.ru/api/v1/chat/completions';
+const DEFAULT_AI_MODEL = 'openai/gpt-4o';
 
 function getAiSettings() {
   return {
